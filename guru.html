@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <title>Sistem Kehadiran - Guru</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f0f2f5;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 12px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+    th {
+      background: #4CAF50;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    button {
+      padding: 8px 15px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #ff5722;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #e64a19;
+    }
+  </style>
+</head>
+<body>
+  <h1>📋 Senarai Kehadiran Ibu Bapa</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Nama Murid</th>
+        <th>Masa Daftar</th>
+        <th>Status</th>
+        <th>Tindakan</th>
+      </tr>
+    </thead>
+    <tbody id="senarai"></tbody>
+  </table>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec"; // Gantikan dengan URL cikgu
+
+    async function loadSenarai() {
+      try {
+        let response = await fetch(API_URL + "?action=senarai");
+        let data = await response.json();
+
+        let tbody = document.getElementById("senarai");
+        tbody.innerHTML = "";
+
+        data.forEach(row => {
+          let tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.no}</td>
+            <td>${row.nama}</td>
+            <td>${new Date(row.masa).toLocaleTimeString()}</td>
+            <td>${row.status}</td>
+            <td>
+              ${row.status === "Belum Dipanggil" 
+                ? `<button onclick="panggil(${row.no})">PANGGIL</button>` 
+                : "✔ Dipanggil"}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Gagal ambil data:", err);
+      }
+    }
+
+    async function panggil(no) {
+      if (!confirm("Panggil murid giliran " + no + "?")) return;
+
+      try {
+        let response = await fetch(API_URL + "?action=panggil&no=" + no);
+        let data = await response.json();
+        if (data.status === "OK") {
+          alert("Murid giliran " + no + " sudah dipanggil.");
+          loadSenarai();
+        }
+      } catch (err) {
+        alert("Ralat! Tidak dapat memanggil.");
+      }
+    }
+
+    // Auto refresh setiap 5 saat
+    setInterval(loadSenarai, 5000);
+    loadSenarai();
+  </script>
+</body>
+</html>

@@ -2,73 +2,142 @@
 <html lang="ms">
 <head>
   <meta charset="UTF-8">
-  <title>Sistem Kehadiran Ibu Bapa</title>
+  <title>Sistem Kehadiran - Guru</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      text-align: center;
       padding: 20px;
-      background: #f9f9f9;
+      background: #f0f2f5;
     }
     h1 {
+      text-align: center;
       color: #333;
     }
-    input {
-      padding: 10px;
-      width: 80%;
-      margin: 10px 0;
-      border-radius: 8px;
-      border: 1px solid #aaa;
-      font-size: 16px;
+    #loading {
+      text-align: center;
+      font-style: italic;
+      color: #555;
+      display: none;
+      margin-top: 10px;
     }
-    button {
-      padding: 12px 25px;
-      font-size: 16px;
+    #refreshBtn {
+      display: block;
+      margin: 15px auto;
+      padding: 10px 20px;
+      font-size: 14px;
       border: none;
-      border-radius: 10px;
-      background: #4CAF50;
+      border-radius: 8px;
+      background: #2196F3;
       color: white;
       cursor: pointer;
     }
-    button:hover {
-      background: #45a049;
+    #refreshBtn:hover {
+      background: #1976D2;
     }
-    #result {
+    table {
+      width: 100%;
+      border-collapse: collapse;
       margin-top: 20px;
-      font-size: 18px;
-      font-weight: bold;
-      color: #444;
+      background: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 12px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+    th {
+      background: #4CAF50;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    button.action {
+      padding: 8px 15px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #ff5722;
+      color: white;
+      cursor: pointer;
+    }
+    button.action:hover {
+      background: #e64a19;
     }
   </style>
 </head>
 <body>
-  <h1>Sistem Kehadiran Ibu Bapa</h1>
-  <p>Masukkan nama anak anda:</p>
-  <input type="text" id="nama" placeholder="Contoh: Ali bin Ahmad">
-  <br>
-  <button onclick="daftarGiliran()">DAFTAR GILIRAN</button>
-  <p id="result"></p>
+  <h1>📋 Senarai Kehadiran Ibu Bapa</h1>
+
+  <button id="refreshBtn" onclick="muatSenarai()">🔄 Muat Semula</button>
+  <div id="loading">Sedang memuat data...</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Nama Murid</th>
+        <th>Masa Daftar</th>
+        <th>Status</th>
+        <th>Tindakan</th>
+      </tr>
+    </thead>
+    <tbody id="senarai"></tbody>
+  </table>
 
   <script>
-    async function daftarGiliran() {
-      let nama = document.getElementById("nama").value;
-      if (!nama) {
-        alert("Sila masukkan nama anak.");
-        return;
-      }
+    const API_URL = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec"; // Gantikan dengan URL cikgu
 
-      // Gantikan URL di bawah dengan URL Google Apps Script cikgu
-      let url = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec?action=daftar&nama=" + encodeURIComponent(nama);
-
+    async function muatSenarai() {
+      document.getElementById("loading").style.display = "block";
       try {
-        let response = await fetch(url);
+        let response = await fetch(API_URL + "?action=senarai");
         let data = await response.json();
-        document.getElementById("result").innerText = 
-          "Nama: " + data.nama + " ✔\nGiliran ke-" + data.giliran;
+
+        let tbody = document.getElementById("senarai");
+        tbody.innerHTML = "";
+
+        data.forEach(row => {
+          let tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.no}</td>
+            <td>${row.nama}</td>
+            <td>${new Date(row.masa).toLocaleTimeString()}</td>
+            <td>${row.status}</td>
+            <td>
+              ${row.status === "Belum Dipanggil" 
+                ? `<button class="action" onclick="panggil(${row.no})">PANGGIL</button>` 
+                : "✔ Dipanggil"}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
       } catch (err) {
-        document.getElementById("result").innerText = "Ralat! Tidak dapat mendaftar.";
+        console.error("Gagal ambil data:", err);
+      } finally {
+        document.getElementById("loading").style.display = "none";
       }
     }
+
+    async function panggil(no) {
+      if (!confirm("Panggil murid giliran " + no + "?")) return;
+
+      try {
+        let response = await fetch(API_URL + "?action=panggil&no=" + no);
+        let data = await response.json();
+        if (data.status === "OK") {
+          alert("Murid giliran " + no + " sudah dipanggil.");
+          muatSenarai();
+        }
+      } catch (err) {
+        alert("Ralat! Tidak dapat memanggil.");
+      }
+    }
+
+    // Auto refresh setiap 30s (lebih ringan dari 5s)
+    setInterval(muatSenarai, 30000);
+    muatSenarai();
   </script>
 </body>
 </html>

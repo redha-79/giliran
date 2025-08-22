@@ -2,114 +2,73 @@
 <html lang="ms">
 <head>
   <meta charset="UTF-8">
-  <title>Sistem Kehadiran - Guru</title>
+  <title>Sistem Kehadiran Ibu Bapa</title>
   <style>
     body {
       font-family: Arial, sans-serif;
+      text-align: center;
       padding: 20px;
-      background: #f0f2f5;
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      background: white;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    th, td {
-      padding: 12px;
-      border: 1px solid #ddd;
-      text-align: center;
-    }
-    th {
-      background: #4CAF50;
-      color: white;
-    }
-    tr:nth-child(even) {
       background: #f9f9f9;
     }
-    button {
-      padding: 8px 15px;
-      font-size: 14px;
-      border: none;
+    h1 {
+      color: #333;
+    }
+    input {
+      padding: 10px;
+      width: 80%;
+      margin: 10px 0;
       border-radius: 8px;
-      background: #ff5722;
+      border: 1px solid #aaa;
+      font-size: 16px;
+    }
+    button {
+      padding: 12px 25px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      background: #4CAF50;
       color: white;
       cursor: pointer;
     }
     button:hover {
-      background: #e64a19;
+      background: #45a049;
+    }
+    #result {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #444;
     }
   </style>
 </head>
 <body>
-  <h1>📋 Senarai Kehadiran Ibu Bapa</h1>
-  <table>
-    <thead>
-      <tr>
-        <th>No</th>
-        <th>Nama Murid</th>
-        <th>Masa Daftar</th>
-        <th>Status</th>
-        <th>Tindakan</th>
-      </tr>
-    </thead>
-    <tbody id="senarai"></tbody>
-  </table>
+  <h1>Sistem Kehadiran Ibu Bapa</h1>
+  <p>Masukkan nama anak anda:</p>
+  <input type="text" id="nama" placeholder="Contoh: Ali bin Ahmad">
+  <br>
+  <button onclick="daftarGiliran()">DAFTAR GILIRAN</button>
+  <p id="result"></p>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec"; // Gantikan dengan URL cikgu
-
-    async function loadSenarai() {
-      try {
-        let response = await fetch(API_URL + "?action=senarai");
-        let data = await response.json();
-
-        let tbody = document.getElementById("senarai");
-        tbody.innerHTML = "";
-
-        data.forEach(row => {
-          let tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${row.no}</td>
-            <td>${row.nama}</td>
-            <td>${new Date(row.masa).toLocaleTimeString()}</td>
-            <td>${row.status}</td>
-            <td>
-              ${row.status === "Belum Dipanggil" 
-                ? `<button onclick="panggil(${row.no})">PANGGIL</button>` 
-                : "✔ Dipanggil"}
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      } catch (err) {
-        console.error("Gagal ambil data:", err);
+    async function daftarGiliran() {
+      let nama = document.getElementById("nama").value;
+      if (!nama) {
+        alert("Sila masukkan nama anak.");
+        return;
       }
-    }
 
-    async function panggil(no) {
-      if (!confirm("Panggil murid giliran " + no + "?")) return;
+      // Gantikan URL di bawah dengan URL Google Apps Script cikgu
+      let url = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec?action=daftar&nama=" + encodeURIComponent(nama);
 
       try {
-        let response = await fetch(API_URL + "?action=panggil&no=" + no);
+        let response = await fetch(url);
         let data = await response.json();
-        if (data.status === "OK") {
-          alert("Murid giliran " + no + " sudah dipanggil.");
-          loadSenarai();
-        }
+        document.getElementById("result").innerText = 
+          "Nama: " + data.nama + " ✔\nGiliran ke-" + data.giliran;
       } catch (err) {
-        alert("Ralat! Tidak dapat memanggil.");
+        document.getElementById("result").innerText = "Ralat! Tidak dapat mendaftar.";
       }
     }
-
-    // Auto refresh setiap 5 saat
-    setInterval(loadSenarai, 5000);
-    loadSenarai();
   </script>
 </body>
 </html>

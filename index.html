@@ -46,4 +46,65 @@
     #result {
       margin-top: 20px;
       text-align: center;
-      f
+      font-size: 18px;
+      color: #333;
+    }
+    #loading {
+      text-align: center;
+      font-style: italic;
+      color: #555;
+      display: none;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📌 Daftar Kehadiran Hari Terbuka</h1>
+
+  <form id="formDaftar">
+    <label for="nama">Nama Murid:</label>
+    <input type="text" id="nama" required>
+    <button type="submit" id="btnDaftar">DAFTAR GILIRAN</button>
+    <div id="loading">⏳ Sedang daftar giliran...</div>
+  </form>
+
+  <div id="result"></div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec"; // ganti dengan URL cikgu
+
+    document.getElementById("formDaftar").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const nama = document.getElementById("nama").value.trim();
+      if (!nama) return alert("Sila masukkan nama murid.");
+
+      const btn = document.getElementById("btnDaftar");
+      const loading = document.getElementById("loading");
+      const result = document.getElementById("result");
+
+      // Tukar state ke 'loading'
+      btn.disabled = true;
+      loading.style.display = "block";
+      result.innerHTML = "";
+
+      try {
+        let response = await fetch(API_URL + "?action=daftar&nama=" + encodeURIComponent(nama));
+        let data = await response.json();
+
+        if (data.status === "OK") {
+          result.innerHTML = `<b>${nama}</b>, giliran anda ialah <span style="color:green;font-size:20px;">${data.giliran}</span>`;
+        } else {
+          result.innerHTML = `<span style="color:red;">Ralat: ${data.message || "Tidak dapat daftar."}</span>`;
+        }
+      } catch (err) {
+        result.innerHTML = `<span style="color:red;">⚠ Gagal sambungan ke server!</span>`;
+      } finally {
+        // Pulihkan butang & spinner
+        btn.disabled = false;
+        loading.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>

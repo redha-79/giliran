@@ -2,111 +2,73 @@
 <html lang="ms">
 <head>
   <meta charset="UTF-8">
-  <title>Daftar Kehadiran Hari Terbuka</title>
+  <title>Pendaftaran Anak</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f6f9;
-      text-align: center;
-      padding: 30px;
-    }
-    h1 {
-      color: #333;
-    }
-    .form-box {
-      background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      display: inline-block;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    input[type="text"] {
-      padding: 10px;
-      width: 250px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      margin-top: 10px;
-    }
-    button {
-      padding: 10px 20px;
-      margin-top: 15px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    .message {
-      margin-top: 15px;
-      font-weight: bold;
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; }
     .spinner {
-      margin: 15px auto;
-      border: 5px solid #f3f3f3;
-      border-top: 5px solid #3498db;
-      border-radius: 50%;
-      width: 35px;
-      height: 35px;
-      animation: spin 1s linear infinite;
       display: none;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 10px auto;
     }
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    .success { color: green; font-weight: bold; }
+    .error { color: red; font-weight: bold; }
   </style>
 </head>
 <body>
+  <h2>Daftar Nama Anak</h2>
+  <form id="daftarForm">
+    <input type="text" id="nama" placeholder="Masukkan nama anak" required>
+    <button type="submit">Daftar</button>
+  </form>
 
-  <h1>📌 Daftar Kehadiran Hari Terbuka</h1>
-  <div class="form-box">
-    <form id="daftarForm">
-      <label for="nama">Nama Murid:</label><br>
-      <input type="text" id="nama" name="nama" required><br>
-      <button type="submit">DAFTAR GILIRAN</button>
-    </form>
-    <div class="spinner" id="spinner"></div>
-    <div class="message" id="message"></div>
-  </div>
-<script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec";
+  <div class="spinner" id="spinner"></div>
+  <p id="status"></p>
 
-document.getElementById("formDaftar").addEventListener("submit", function(e) {
-  e.preventDefault();
-  let nama = document.getElementById("nama").value;
+  <script>
+    const form = document.getElementById("daftarForm");
+    const spinner = document.getElementById("spinner");
+    const statusEl = document.getElementById("status");
 
-  fetch(`${API_URL}?action=daftar&nama=${encodeURIComponent(nama)}`)
-    .then(response => response.text()) // ambil dulu sebagai text
-    .then(text => {
+    // 👉 Tukar URL ni kepada URL Google Apps Script kau
+    const API_URL = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec";
+
+    form.addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const nama = document.getElementById("nama").value.trim();
+      if (!nama) return;
+
+      spinner.style.display = "block";
+      statusEl.textContent = "";
+
       try {
-        let data = JSON.parse(text); // cuba parse JSON
+        const res = await fetch(`${API_URL}?action=daftar&nama=${encodeURIComponent(nama)}`);
+        const data = await res.json();
+
+        spinner.style.display = "none";
+
         if (data.success) {
-          document.getElementById("result").innerHTML = 
-            `<span style="color:green;">Berjaya daftar! Giliran anda: ${data.giliran}</span>`;
+          statusEl.textContent = `✅ ${data.message}. Giliran anda: ${data.giliran}`;
+          statusEl.className = "success";
         } else {
-          document.getElementById("result").innerHTML = 
-            `<span style="color:red;">Ralat: ${text}</span>`;
+          statusEl.textContent = `❌ ${data.message}`;
+          statusEl.className = "error";
         }
-      } catch (e) {
-        // kalau bukan JSON, tetap tunjuk text dari API
-        document.getElementById("result").innerHTML = 
-          `<span style="color:green;">${text}</span>`;
+      } catch (err) {
+        spinner.style.display = "none";
+        statusEl.textContent = "❌ Ralat sambungan ke server.";
+        statusEl.className = "error";
       }
-    })
-    .catch(err => {
-      document.getElementById("result").innerHTML = 
-        `<span style="color:red;">Ralat API: ${err}</span>`;
     });
-});
-</script>
-  
+  </script>
 </body>
 </html>
-
-
-
-

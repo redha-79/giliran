@@ -1,28 +1,96 @@
 <!DOCTYPE html>
-<html>
+<html lang="ms">
 <head>
-  <title>Daftar Murid</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pendaftaran Murid</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      text-align: center;
+    }
+    label, input, button {
+      font-size: 18px;
+      margin: 10px 0;
+    }
+    input {
+      padding: 8px;
+      width: 80%;
+      max-width: 300px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 20px;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    /* Spinner */
+    .spinner {
+      display: none;
+      margin: 20px auto;
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #3498db;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
-  <h2>Daftar Kehadiran</h2>
-  <input type="text" id="nama" placeholder="Masukkan nama murid">
-  <button onclick="daftar()">Daftar</button>
-  <p id="status"></p>
+  <h2>Pendaftaran Murid</h2>
+  <label for="nama">Nama Murid:</label><br>
+  <input type="text" id="nama" placeholder="Masukkan nama"><br>
+  <button onclick="daftar()">Hantar</button>
+
+  <!-- Spinner -->
+  <div class="spinner" id="loadingSpinner"></div>
+
+  <!-- Status -->
+  <div id="status"></div>
 
   <script>
-    const url = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec"; // ganti dengan URL web app
+    const API_URL = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec";
 
     function daftar() {
-      let nama = document.getElementById("nama").value;
-      fetch(url + "?action=daftar&nama=" + encodeURIComponent(nama))
-        .then(res => res.text())
-        .then(txt => {
-          document.getElementById("status").innerText = txt;
+      const nama = document.getElementById("nama").value.trim();
+      const statusDiv = document.getElementById("status");
+      const spinner = document.getElementById("loadingSpinner");
+
+      if (!nama) {
+        statusDiv.innerText = "Sila masukkan nama murid!";
+        return;
+      }
+
+      // Reset status & tunjuk spinner
+      statusDiv.innerText = "";
+      spinner.style.display = "block";
+
+      fetch(API_URL + "?action=daftar&nama=" + encodeURIComponent(nama))
+        .then(res => res.json())
+        .then(data => {
+          spinner.style.display = "none"; // sorok spinner
+          if (data && data.status === "berjaya") {
+            statusDiv.innerText = "✅ BERJAYA DAFTAR!";
+            document.getElementById("nama").value = "";
+          } else {
+            statusDiv.innerText = "❌ Gagal daftar. Cuba lagi.";
+          }
         })
-        .catch(err => alert("Ralat: " + err));
+        .catch(err => {
+          spinner.style.display = "none";
+          statusDiv.innerText = "⚠️ Ralat sambungan. Cuba lagi.";
+        });
     }
   </script>
 </body>
 </html>
-
-

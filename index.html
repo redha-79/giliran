@@ -72,43 +72,41 @@
     <div class="spinner" id="spinner"></div>
     <div class="message" id="message"></div>
   </div>
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec";
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec"; // <--- ganti dengan URL Google Apps Script kau
+document.getElementById("formDaftar").addEventListener("submit", function(e) {
+  e.preventDefault();
+  let nama = document.getElementById("nama").value;
 
-    const form = document.getElementById("daftarForm");
-    const spinner = document.getElementById("spinner");
-    const messageDiv = document.getElementById("message");
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      messageDiv.innerHTML = "";
-      spinner.style.display = "block";
-
-      const nama = document.getElementById("nama").value;
-
+  fetch(`${API_URL}?action=daftar&nama=${encodeURIComponent(nama)}`)
+    .then(response => response.text()) // ambil dulu sebagai text
+    .then(text => {
       try {
-        const response = await fetch(`${API_URL}?action=daftar&nama=${encodeURIComponent(nama)}`);
-        const result = await response.json();
-
-        if (result.success) {
-          messageDiv.style.color = "green";
-          messageDiv.innerHTML = `✅ ${result.nama} berjaya didaftar. Giliran ke-<b>${result.giliran}</b>`;
+        let data = JSON.parse(text); // cuba parse JSON
+        if (data.success) {
+          document.getElementById("result").innerHTML = 
+            `<span style="color:green;">Berjaya daftar! Giliran anda: ${data.giliran}</span>`;
         } else {
-          messageDiv.style.color = "red";
-          messageDiv.innerHTML = "❌ Ralat: Tidak dapat daftar.";
+          document.getElementById("result").innerHTML = 
+            `<span style="color:red;">Ralat: ${text}</span>`;
         }
-      } catch (error) {
-        console.error(error);
-        messageDiv.style.color = "red";
-        messageDiv.innerHTML = "❌ Ralat: Tidak dapat daftar (API Error).";
-      } finally {
-        spinner.style.display = "none";
+      } catch (e) {
+        // kalau bukan JSON, tetap tunjuk text dari API
+        document.getElementById("result").innerHTML = 
+          `<span style="color:green;">${text}</span>`;
       }
+    })
+    .catch(err => {
+      document.getElementById("result").innerHTML = 
+        `<span style="color:red;">Ralat API: ${err}</span>`;
     });
-  </script>
+});
+</script>
+  
 </body>
 </html>
+
 
 
 

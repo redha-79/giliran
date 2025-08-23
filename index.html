@@ -2,115 +2,48 @@
 <html lang="ms">
 <head>
   <meta charset="UTF-8">
-  <title>Sistem Kehadiran - Ibu Bapa</title>
+  <title>Daftar Kehadiran</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f0f2f5;
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    form {
-      max-width: 400px;
-      margin: 20px auto;
-      padding: 20px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    input {
-      width: 100%;
-      padding: 12px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 16px;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      background: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    button:disabled {
-      background: #9e9e9e;
-      cursor: not-allowed;
-    }
-    #result {
-      margin-top: 20px;
-      text-align: center;
-      font-size: 18px;
-      color: #333;
-    }
-    #loading {
-      text-align: center;
-      font-style: italic;
-      color: #555;
-      display: none;
-      margin-top: 10px;
-    }
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+    #spinner { display: none; }
   </style>
 </head>
 <body>
-  <h1>📌 Daftar Kehadiran Hari Terbuka</h1>
-
-  <form id="formDaftar">
-    <label for="nama">Nama Murid:</label>
-    <input type="text" id="nama" required>
-    <button type="submit" id="btnDaftar">DAFTAR GILIRAN</button>
-    <div id="loading">⏳ Sedang daftar giliran...</div>
-  </form>
-
-  <div id="result"></div>
+  <h2>Daftar Kehadiran Murid</h2>
+  <input type="text" id="nama" placeholder="Nama Anak">
+  <button onclick="daftar()">Daftar</button>
+  <div id="spinner">⏳ Mendaftar...</div>
+  <p id="output"></p>
 
   <script>
-    // ⚠️ Pastikan API_URL ini betul (yang keluar selepas cikgu Deploy as Web App di Google Apps Script)
-    const API_URL = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbzFREVG5nL7k6gB9wlXOexW2BC2-Lp1x955mI2WeUDWnGeeg5Pj7r66oU_jMfCZLUBM/exec";
 
-    document.getElementById("formDaftar").addEventListener("submit", async function(e) {
-      e.preventDefault();
-
+    async function daftar() {
       const nama = document.getElementById("nama").value.trim();
-      if (!nama) return alert("Sila masukkan nama murid.");
+      if (!nama) {
+        alert("Sila masukkan nama");
+        return;
+      }
 
-      const btn = document.getElementById("btnDaftar");
-      const loading = document.getElementById("loading");
-      const result = document.getElementById("result");
-
-      // Tukar state ke 'loading'
-      btn.disabled = true;
-      loading.style.display = "block";
-      result.innerHTML = "";
+      document.getElementById("spinner").style.display = "block";
+      document.getElementById("output").innerText = "";
 
       try {
-        console.log("Hantar data ke API..."); // Debug
-        let response = await fetch(API_URL + "?action=daftar&nama=" + encodeURIComponent(nama));
-        console.log("Response OK:", response);
-        let data = await response.json();
-        console.log("Data JSON:", data);
+        const res = await fetch(`${API_URL}?action=daftar&nama=${encodeURIComponent(nama)}`);
+        const data = await res.json();
 
         if (data.status === "OK") {
-          result.innerHTML = `<b>${nama}</b>, giliran anda ialah <span style="color:green;font-size:20px;">${data.giliran}</span>`;
+          document.getElementById("output").innerText =
+            `✔️ ${data.nama} berjaya daftar. Giliran: ${data.giliran}`;
         } else {
-          result.innerHTML = `<span style="color:red;">Ralat: ${data.message || "Tidak dapat daftar."}</span>`;
+          document.getElementById("output").innerText = "❌ Ralat mendaftar!";
         }
       } catch (err) {
-        console.error("Fetch error:", err); // Debug error
-        result.innerHTML = `<span style="color:red;">⚠ Gagal sambungan ke server!</span>`;
+        document.getElementById("output").innerText = "⚠️ Ralat sambungan!";
       } finally {
-        // Pulihkan butang & spinner
-        btn.disabled = false;
-        loading.style.display = "none";
+        document.getElementById("spinner").style.display = "none";
       }
-    });
+    }
   </script>
 </body>
 </html>
-

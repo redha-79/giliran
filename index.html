@@ -2,48 +2,110 @@
 <html lang="ms">
 <head>
   <meta charset="UTF-8">
-  <title>Daftar Kehadiran</title>
+  <title>Daftar Kehadiran Hari Terbuka</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
-    #spinner { display: none; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+      text-align: center;
+      padding: 30px;
+    }
+    h1 {
+      color: #333;
+    }
+    .form-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      display: inline-block;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    input[type="text"] {
+      padding: 10px;
+      width: 250px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .message {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    .spinner {
+      margin: 15px auto;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #3498db;
+      border-radius: 50%;
+      width: 35px;
+      height: 35px;
+      animation: spin 1s linear infinite;
+      display: none;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
-  <h2>Daftar Kehadiran Murid</h2>
-  <input type="text" id="nama" placeholder="Nama Anak">
-  <button onclick="daftar()">Daftar</button>
-  <div id="spinner">⏳ Mendaftar...</div>
-  <p id="output"></p>
+
+  <h1>📌 Daftar Kehadiran Hari Terbuka</h1>
+  <div class="form-box">
+    <form id="daftarForm">
+      <label for="nama">Nama Murid:</label><br>
+      <input type="text" id="nama" name="nama" required><br>
+      <button type="submit">DAFTAR GILIRAN</button>
+    </form>
+    <div class="spinner" id="spinner"></div>
+    <div class="message" id="message"></div>
+  </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzFREVG5nL7k6gB9wlXOexW2BC2-Lp1x955mI2WeUDWnGeeg5Pj7r66oU_jMfCZLUBM/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbxBmskjyUMlRw4pd8cccRdPJnJ44SJAITV_Nau1JHU/dev"; // <--- ganti dengan URL Google Apps Script kau
 
-    async function daftar() {
-      const nama = document.getElementById("nama").value.trim();
-      if (!nama) {
-        alert("Sila masukkan nama");
-        return;
-      }
+    const form = document.getElementById("daftarForm");
+    const spinner = document.getElementById("spinner");
+    const messageDiv = document.getElementById("message");
 
-      document.getElementById("spinner").style.display = "block";
-      document.getElementById("output").innerText = "";
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      messageDiv.innerHTML = "";
+      spinner.style.display = "block";
+
+      const nama = document.getElementById("nama").value;
 
       try {
-        const res = await fetch(`${API_URL}?action=daftar&nama=${encodeURIComponent(nama)}`);
-        const data = await res.json();
+        const response = await fetch(`${API_URL}?action=daftar&nama=${encodeURIComponent(nama)}`);
+        const result = await response.json();
 
-        if (data.status === "OK") {
-          document.getElementById("output").innerText =
-            `✔️ ${data.nama} berjaya daftar. Giliran: ${data.giliran}`;
+        if (result.success) {
+          messageDiv.style.color = "green";
+          messageDiv.innerHTML = `✅ ${result.nama} berjaya didaftar. Giliran ke-<b>${result.giliran}</b>`;
         } else {
-          document.getElementById("output").innerText = "❌ Ralat mendaftar!";
+          messageDiv.style.color = "red";
+          messageDiv.innerHTML = "❌ Ralat: Tidak dapat daftar.";
         }
-      } catch (err) {
-        document.getElementById("output").innerText = "⚠️ Ralat sambungan!";
+      } catch (error) {
+        console.error(error);
+        messageDiv.style.color = "red";
+        messageDiv.innerHTML = "❌ Ralat: Tidak dapat daftar (API Error).";
       } finally {
-        document.getElementById("spinner").style.display = "none";
+        spinner.style.display = "none";
       }
-    }
+    });
   </script>
 </body>
 </html>

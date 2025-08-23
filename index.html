@@ -40,36 +40,29 @@
 
     // 👉 Tukar URL ni kepada URL Google Apps Script kau
     const API_URL = "https://script.google.com/macros/s/AKfycbwVB4CtJ9OYpppnvcMDpZ_-f3dMm8SH--UN7bEQja_CVfX563LGM4x8H56fzSV4lXlU/exec";
+<script>
+document.getElementById("formDaftar").addEventListener("submit", function(e) {
+  e.preventDefault();
+  let nama = document.getElementById("nama").value;
 
-    form.addEventListener("submit", async function(e) {
-      e.preventDefault();
-
-      const nama = document.getElementById("nama").value.trim();
-      if (!nama) return;
-
-      spinner.style.display = "block";
-      statusEl.textContent = "";
-
-      try {
-        const res = await fetch(`${API_URL}?action=daftar&nama=${encodeURIComponent(nama)}`);
-        const data = await res.json();
-
-        spinner.style.display = "none";
-
-        if (data.success) {
-          statusEl.textContent = `✅ ${data.message}. Giliran anda: ${data.giliran}`;
-          statusEl.className = "success";
-        } else {
-          statusEl.textContent = `❌ ${data.message}`;
-          statusEl.className = "error";
-        }
-      } catch (err) {
-        spinner.style.display = "none";
-        statusEl.textContent = "❌ Ralat sambungan ke server.";
-        statusEl.className = "error";
+  fetch(API_URL + "?action=daftar&nama=" + encodeURIComponent(nama))
+    .then(res => res.json())
+    .then(data => {
+      console.log("API Response:", data); // <-- debug
+      if (data.success) {
+        alert(data.message + " - Giliran anda: " + data.giliran);
+        document.getElementById("nama").value = "";
+      } else {
+        alert("Ralat: " + data.message);
       }
+    })
+    .catch(err => {
+      console.error("Fetch error:", err);
+      alert("Ralat sambungan API");
     });
-  </script>
+});
+</script>
 </body>
 </html>
+
 

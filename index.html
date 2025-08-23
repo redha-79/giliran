@@ -1,71 +1,26 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Pendaftaran Anak</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    .spinner {
-      display: none;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #3498db;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      animation: spin 1s linear infinite;
-      margin: 10px auto;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    .success { color: green; font-weight: bold; }
-    .error { color: red; font-weight: bold; }
-  </style>
+  <title>Daftar Murid</title>
 </head>
 <body>
-  <h2>Daftar Nama Anak</h2>
-  <form id="daftarForm">
-    <input type="text" id="nama" placeholder="Masukkan nama anak" required>
-    <button type="submit">Daftar</button>
-  </form>
-
-  <div class="spinner" id="spinner"></div>
+  <h2>Daftar Kehadiran</h2>
+  <input type="text" id="nama" placeholder="Masukkan nama murid">
+  <button onclick="daftar()">Daftar</button>
   <p id="status"></p>
 
   <script>
-    const form = document.getElementById("daftarForm");
-    const spinner = document.getElementById("spinner");
-    const statusEl = document.getElementById("status");
+    const url = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec"; // ganti dengan URL web app
 
-    // 👉 Tukar URL ni kepada URL Google Apps Script kau
-    const API_URL = "https://script.google.com/macros/s/AKfycbyYVXvRE7X82uNnW0QxiAuiOMuUJIGMSrbb3fNQjQtkrRTBFCFdXNfbgQcM-rWLbr7t/exec";
-<script>
-document.getElementById("formDaftar").addEventListener("submit", function(e) {
-  e.preventDefault();
-  let nama = document.getElementById("nama").value;
-
-  fetch(API_URL + "?action=daftar&nama=" + encodeURIComponent(nama))
-    .then(res => res.json())
-    .then(data => {
-      console.log("API Response:", data); // <-- debug
-      if (data.success) {
-        alert(data.message + " - Giliran anda: " + data.giliran);
-        document.getElementById("nama").value = "";
-      } else {
-        alert("Ralat: " + data.message);
-      }
-    })
-    .catch(err => {
-      console.error("Fetch error:", err);
-      alert("Ralat sambungan API");
-    });
-});
-</script>
+    function daftar() {
+      let nama = document.getElementById("nama").value;
+      fetch(url + "?action=daftar&nama=" + encodeURIComponent(nama))
+        .then(res => res.text())
+        .then(txt => {
+          document.getElementById("status").innerText = txt;
+        })
+        .catch(err => alert("Ralat: " + err));
+    }
+  </script>
 </body>
 </html>
-
-
-
-
-

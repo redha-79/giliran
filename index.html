@@ -71,7 +71,8 @@
   <div id="result"></div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec"; // ganti dengan URL cikgu
+    // ⚠️ Pastikan API_URL ini betul (yang keluar selepas cikgu Deploy as Web App di Google Apps Script)
+    const API_URL = "PASTE_URL_SCRIPT_CIKGU_DI_SINI";
 
     document.getElementById("formDaftar").addEventListener("submit", async function(e) {
       e.preventDefault();
@@ -89,8 +90,11 @@
       result.innerHTML = "";
 
       try {
+        console.log("Hantar data ke API..."); // Debug
         let response = await fetch(API_URL + "?action=daftar&nama=" + encodeURIComponent(nama));
+        console.log("Response OK:", response);
         let data = await response.json();
+        console.log("Data JSON:", data);
 
         if (data.status === "OK") {
           result.innerHTML = `<b>${nama}</b>, giliran anda ialah <span style="color:green;font-size:20px;">${data.giliran}</span>`;
@@ -98,6 +102,7 @@
           result.innerHTML = `<span style="color:red;">Ralat: ${data.message || "Tidak dapat daftar."}</span>`;
         }
       } catch (err) {
+        console.error("Fetch error:", err); // Debug error
         result.innerHTML = `<span style="color:red;">⚠ Gagal sambungan ke server!</span>`;
       } finally {
         // Pulihkan butang & spinner

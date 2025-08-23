@@ -2,142 +2,89 @@
 <html lang="ms">
 <head>
   <meta charset="UTF-8">
-  <title>Sistem Kehadiran - Guru</title>
+  <title>Paparan Guru</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f0f2f5;
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    #loading {
-      text-align: center;
-      font-style: italic;
-      color: #555;
-      display: none;
-      margin-top: 10px;
-    }
-    #refreshBtn {
-      display: block;
-      margin: 15px auto;
-      padding: 10px 20px;
-      font-size: 14px;
-      border: none;
-      border-radius: 8px;
-      background: #2196F3;
-      color: white;
-      cursor: pointer;
-    }
-    #refreshBtn:hover {
-      background: #1976D2;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      background: white;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    th, td {
-      padding: 12px;
-      border: 1px solid #ddd;
-      text-align: center;
-    }
-    th {
-      background: #4CAF50;
-      color: white;
-    }
-    tr:nth-child(even) {
-      background: #f9f9f9;
-    }
-    button.action {
-      padding: 8px 15px;
-      font-size: 14px;
-      border: none;
-      border-radius: 8px;
-      background: #ff5722;
-      color: white;
-      cursor: pointer;
-    }
-    button.action:hover {
-      background: #e64a19;
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background: #f2f2f2; }
+    #spinner { display: none; }
   </style>
 </head>
 <body>
-  <h1>📋 Senarai Kehadiran Ibu Bapa</h1>
-
-  <button id="refreshBtn" onclick="muatSenarai()">🔄 Muat Semula</button>
-  <div id="loading">Sedang memuat data...</div>
-
-  <table>
+  <h2>Senarai Kehadiran</h2>
+  <div id="spinner">⏳ Memuatkan data...</div>
+  <table id="jadual">
     <thead>
       <tr>
         <th>No</th>
-        <th>Nama Murid</th>
-        <th>Masa Daftar</th>
+        <th>Nama</th>
+        <th>Masa</th>
         <th>Status</th>
         <th>Tindakan</th>
       </tr>
     </thead>
-    <tbody id="senarai"></tbody>
+    <tbody></tbody>
   </table>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec"; // Gantikan dengan URL cikgu
+    const API_URL = "PASTE_DEPLOYED_SCRIPT_URL_HERE";
 
-    async function muatSenarai() {
-      document.getElementById("loading").style.display = "block";
+    async function loadSenarai() {
+      document.getElementById("spinner").style.display = "block";
+      const tbody = document.querySelector("#jadual tbody");
+      tbody.innerHTML = "";
+
       try {
-        let response = await fetch(API_URL + "?action=senarai");
-        let data = await response.json();
+        const res = await fetch(`${API_URL}?action=senarai`);
+        const data = await res.json();
 
-        let tbody = document.getElementById("senarai");
-        tbody.innerHTML = "";
-
-        data.forEach(row => {
-          let tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${row.no}</td>
-            <td>${row.nama}</td>
-            <td>${new Date(row.masa).toLocaleTimeString()}</td>
-            <td>${row.status}</td>
-            <td>
-              ${row.status === "Belum Dipanggil" 
-                ? `<button class="action" onclick="panggil(${row.no})">PANGGIL</button>` 
-                : "✔ Dipanggil"}
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
+        if (data.status === "OK" && data.senarai.length > 0) {
+          data.senarai.forEach(item => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${item.no}</td>
+              <td>${item.nama}</td>
+              <td>${new Date(item.masa).toLocaleString()}</td>
+              <td>${item.status}</td>
+              <td>
+                ${item.status === "Belum Dipanggil" 
+                  ? `<button onclick="panggil(${item.no})">Panggil</button>` 
+                  : "✅"}
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        } else {
+          tbody.innerHTML = `<tr><td colspan="5">Tiada data</td></tr>`;
+        }
       } catch (err) {
-        console.error("Gagal ambil data:", err);
+        tbody.innerHTML = `<tr><td colspan="5">⚠️ Ralat sambungan!</td></tr>`;
       } finally {
-        document.getElementById("loading").style.display = "none";
+        document.getElementById("spinner").style.display = "none";
       }
     }
 
     async function panggil(no) {
-      if (!confirm("Panggil murid giliran " + no + "?")) return;
-
+      document.getElementById("spinner").style.display = "block";
       try {
-        let response = await fetch(API_URL + "?action=panggil&no=" + no);
-        let data = await response.json();
+        const res = await fetch(`${API_URL}?action=panggil&no=${no}`);
+        const data = await res.json();
         if (data.status === "OK") {
-          alert("Murid giliran " + no + " sudah dipanggil.");
-          muatSenarai();
+          loadSenarai();
+        } else {
+          alert("❌ Ralat: gagal memanggil murid.");
         }
       } catch (err) {
-        alert("Ralat! Tidak dapat memanggil.");
+        alert("⚠️ Ralat sambungan!");
+      } finally {
+        document.getElementById("spinner").style.display = "none";
       }
     }
 
-    // Auto refresh setiap 30s (lebih ringan dari 5s)
-    setInterval(muatSenarai, 30000);
-    muatSenarai();
+    // Auto-refresh senarai setiap 5s
+    setInterval(loadSenarai, 5000);
+    loadSenarai();
   </script>
 </body>
 </html>

@@ -1,35 +1,891 @@
-<script>
-document.getElementById("daftarForm").addEventListener("submit", function(e){
-  e.preventDefault();
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Kehadiran Hari Terbuka - Live</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .pulse-animation { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .loading { opacity: 0.6; pointer-events: none; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Setup Modal -->
+    <div id="setupModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-8 max-w-md mx-4">
+            <h3 class="text-xl font-bold mb-4">🔗 Setup Google Apps Script</h3>
+            <p class="text-gray-600 mb-4">Masukkan URL Google Apps Script anda:</p>
+            <input type="url" id="scriptUrl" class="w-full px-4 py-2 border rounded-lg mb-4" placeholder="https://script.google.com/macros/s/...">
+            <button id="saveUrlBtn" class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 mb-2">
+                Simpan & Sambung
+            </button>
+            <button id="testConnectionBtn" class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 mb-2">
+                Test Connection
+            </button>
+            <button id="testRegistrationBtn" class="w-full bg-purple-500 text-white py-2 rounded-lg hover:bg-purple-600 mb-2">
+                Test Registration
+            </button>
+            <button id="diagnoseBtn" class="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600">
+                🔍 Diagnose Issues
+            </button>
+            <p class="text-xs text-gray-500 mt-2">URL ini akan disimpan dalam pelayar anda</p>
+            <div id="connectionTest" class="mt-4 p-3 rounded-lg hidden">
+                <p class="text-sm"></p>
+            </div>
+        </div>
+    </div>
 
-  const nama = document.getElementById("nama").value;
-  const statusDiv = document.getElementById("status");
-  const spinner = document.getElementById("spinner");
+    <!-- Parent Message Modal (when not configured) -->
+    <div id="parentMessageModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-8 max-w-md mx-4 text-center">
+            <div class="text-6xl mb-4">🏫</div>
+            <h3 class="text-2xl font-bold mb-4 text-gray-800">Sistem Kehadiran</h3>
+            <p class="text-gray-600 mb-6">Sistem sedang disediakan oleh guru. Sila tunggu sebentar atau hubungi guru untuk bantuan.</p>
+            <button id="refreshPageBtn" class="bg-blue-500 text-white py-2 px-6 rounded-lg hover:bg-blue-600">
+                🔄 Cuba Lagi
+            </button>
+            <p class="text-xs text-gray-500 mt-4">Guru: Tekan 5 kali pada tajuk untuk akses setup</p>
+        </div>
+    </div>
 
-  spinner.style.display = "inline-block";
-  statusDiv.innerText = "";
+    <!-- Header -->
+    <div class="bg-white shadow-lg border-b-4 border-blue-500">
+        <div class="max-w-6xl mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 id="mainTitle" class="text-3xl font-bold text-gray-800 cursor-pointer">🏫 Sistem Kehadiran Hari Terbuka</h1>
+                    <p class="text-gray-600 mt-1">Data Live dengan Google Sheets</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div id="connectionStatus" class="flex items-center">
+                        <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                        <span class="text-sm text-gray-600">Tidak Disambung</span>
+                    </div>
+                    <button id="settingsBtn" class="p-2 text-gray-600 hover:text-gray-800 hidden">⚙️</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-  fetch("https://script.google.com/macros/s/AKfycbzyP3xdStmBZWhTCCiD2d-CZ6HPF97mjPgPfTyYQrcX075vilsSOr48ZLxgLvrJpfQ/exec?action=daftar&nama=" + encodeURIComponent(nama))
-    .then(response => {
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      return response.json();   // ✅ ini pastikan response dibaca sebagai JSON
-    })
-    .then(data => {
-      spinner.style.display = "none";
-      console.log(data); // untuk debug
-      
-      if (data && data.nama) {
-        statusDiv.innerHTML = `<span style="color:green">✅ ${data.nama} berjaya daftar!</span>`;
-      } else {
-        statusDiv.innerHTML = `<span style="color:red">⚠️ Ralat: Tiada data nama.</span>`;
-      }
-    })
-    .catch(error => {
-      spinner.style.display = "none";
-      console.error("Error:", error);
-      statusDiv.innerHTML = `<span style="color:red">⚠️ Ralat sambungan: ${error.message}</span>`;
-    });
-});
-</script>
+    <div class="max-w-6xl mx-auto px-6 py-8">
+        <!-- Mode Selection -->
+        <div class="text-center mb-8">
+            <div class="inline-flex bg-white rounded-lg shadow-md p-1">
+                <button id="parentModeBtn" class="px-6 py-3 rounded-md font-medium transition-all duration-200 bg-blue-500 text-white">
+                    👨‍👩‍👧‍👦 Ibu Bapa
+                </button>
+                <button id="teacherModeBtn" class="px-6 py-3 rounded-md font-medium transition-all duration-200 text-gray-600 hover:text-gray-800">
+                    👩‍🏫 Guru
+                </button>
+            </div>
+        </div>
+
+        <!-- Parent Registration Section -->
+        <div id="parentSection" class="fade-in">
+            <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Pendaftaran Kehadiran</h2>
+                    <p class="text-gray-600">Sila masukkan nama anda untuk mendaftar</p>
+                </div>
+                
+                <div class="max-w-md mx-auto">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 font-medium mb-2">Nama Penuh</label>
+                        <input type="text" id="parentName" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors" placeholder="Masukkan nama anda">
+                    </div>
+                    <button id="registerBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 transform hover:scale-105">
+                        📝 Daftar Kehadiran
+                    </button>
+                </div>
+            </div>
+
+            <!-- Thank You Message -->
+            <div id="thankYouMessage" class="hidden bg-green-50 border-2 border-green-200 rounded-xl p-8 text-center fade-in">
+                <div class="text-6xl mb-4">✅</div>
+                <h3 class="text-2xl font-bold text-green-800 mb-2">Terima Kasih!</h3>
+                <p class="text-green-700 mb-4">Pendaftaran anda berjaya. Sila tunggu giliran anda dipanggil.</p>
+                <div class="bg-white rounded-lg p-6 inline-block shadow-md">
+                    <p class="text-gray-600 mb-2">Nombor Giliran Anda:</p>
+                    <div class="text-4xl font-bold text-blue-600 pulse-animation" id="queueNumber">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teacher Management Section -->
+        <div id="teacherSection" class="hidden">
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Queue Management -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">🎯 Pengurusan Giliran</h3>
+                    
+                    <div class="mb-6">
+                        <div class="bg-blue-50 rounded-lg p-4 text-center">
+                            <p class="text-gray-600 mb-2">Giliran Semasa:</p>
+                            <div class="text-3xl font-bold text-blue-600" id="currentQueue">-</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <p class="text-gray-600 mb-2">Nama Semasa:</p>
+                            <div class="text-lg font-semibold text-gray-800" id="currentName">Tiada</div>
+                        </div>
+                    </div>
+
+                    <button id="callNextBtn" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 mb-3">
+                        📢 Panggil Seterusnya
+                    </button>
+                    
+                    <button id="completeBtn" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200">
+                        ✅ Selesai
+                    </button>
+
+                    <button id="refreshBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 mt-3">
+                        🔄 Refresh Data
+                    </button>
+                </div>
+
+                <!-- Attendance List -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">📋 Senarai Kehadiran</h3>
+                    
+                    <div class="mb-4">
+                        <div class="flex justify-between text-sm text-gray-600">
+                            <span>Jumlah: <span id="totalCount" class="font-semibold">0</span></span>
+                            <span>Menunggu: <span id="waitingCount" class="font-semibold">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="max-h-96 overflow-y-auto">
+                        <div id="attendanceList" class="space-y-2">
+                            <div class="text-center text-gray-500 py-8">
+                                Memuat data...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Data Sheet -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mt-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">📊 Data Kehadiran (Live)</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="border border-gray-200 px-4 py-2 text-left">No.</th>
+                                <th class="border border-gray-200 px-4 py-2 text-left">Nama</th>
+                                <th class="border border-gray-200 px-4 py-2 text-left">Masa Daftar</th>
+                                <th class="border border-gray-200 px-4 py-2 text-left">Status</th>
+                                <th class="border border-gray-200 px-4 py-2 text-left">Masa Dipanggil</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataSheet">
+                            <tr>
+                                <td colspan="5" class="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                                    Memuat data...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        let SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzBAxbJ_CISjvzi2vcK7BeGywiQuSnoy106mXu6_2neZUsVyDy_FeGCHC7_nFPFAh7B/exec';
+        let attendanceData = [];
+        let nextToCall = 1;
+        let titleClickCount = 0;
+
+        // DOM elements
+        const setupModal = document.getElementById('setupModal');
+        const parentMessageModal = document.getElementById('parentMessageModal');
+        const scriptUrlInput = document.getElementById('scriptUrl');
+        const saveUrlBtn = document.getElementById('saveUrlBtn');
+        const testConnectionBtn = document.getElementById('testConnectionBtn');
+        const testRegistrationBtn = document.getElementById('testRegistrationBtn');
+        const diagnoseBtn = document.getElementById('diagnoseBtn');
+        const connectionTest = document.getElementById('connectionTest');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const refreshPageBtn = document.getElementById('refreshPageBtn');
+        const mainTitle = document.getElementById('mainTitle');
+        const parentModeBtn = document.getElementById('parentModeBtn');
+        const teacherModeBtn = document.getElementById('teacherModeBtn');
+        const parentSection = document.getElementById('parentSection');
+        const teacherSection = document.getElementById('teacherSection');
+        const parentNameInput = document.getElementById('parentName');
+        const registerBtn = document.getElementById('registerBtn');
+        const thankYouMessage = document.getElementById('thankYouMessage');
+        const queueNumberDisplay = document.getElementById('queueNumber');
+        const currentQueueDisplay = document.getElementById('currentQueue');
+        const currentNameDisplay = document.getElementById('currentName');
+        const callNextBtn = document.getElementById('callNextBtn');
+        const completeBtn = document.getElementById('completeBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const attendanceList = document.getElementById('attendanceList');
+        const totalCountDisplay = document.getElementById('totalCount');
+        const waitingCountDisplay = document.getElementById('waitingCount');
+        const dataSheet = document.getElementById('dataSheet');
+
+        // Initialize - show appropriate interface
+        scriptUrlInput.value = SCRIPT_URL;
+        settingsBtn.classList.remove('hidden');
+        loadData();
+
+        // Secret setup access - click title 5 times
+        mainTitle.addEventListener('click', () => {
+            titleClickCount++;
+            if (titleClickCount >= 5) {
+                titleClickCount = 0;
+                parentMessageModal.style.display = 'none';
+                setupModal.style.display = 'flex';
+                settingsBtn.classList.remove('hidden');
+            }
+            // Reset counter after 3 seconds
+            setTimeout(() => { titleClickCount = 0; }, 3000);
+        });
+
+        // Refresh page button
+        refreshPageBtn.addEventListener('click', () => {
+            location.reload();
+        });
+
+        // Setup handlers
+        saveUrlBtn.addEventListener('click', () => {
+            const url = scriptUrlInput.value.trim();
+            if (!url) {
+                alert('Sila masukkan URL Google Apps Script');
+                return;
+            }
+            SCRIPT_URL = url;
+            localStorage.setItem('scriptUrl', url);
+            setupModal.style.display = 'none';
+            parentMessageModal.style.display = 'none';
+            settingsBtn.classList.remove('hidden');
+            loadData();
+        });
+
+        testConnectionBtn.addEventListener('click', async () => {
+            const url = scriptUrlInput.value.trim();
+            if (!url) {
+                alert('Sila masukkan URL terlebih dahulu');
+                return;
+            }
+            
+            connectionTest.classList.remove('hidden');
+            connectionTest.className = 'mt-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200';
+            connectionTest.querySelector('p').textContent = 'Testing connection...';
+            
+            try {
+                const response = await fetch(url + '?test=1');
+                const data = await response.json();
+                
+                connectionTest.className = 'mt-4 p-3 rounded-lg bg-green-50 border border-green-200';
+                connectionTest.querySelector('p').textContent = '✅ Connection successful! Ready to use.';
+            } catch (error) {
+                connectionTest.className = 'mt-4 p-3 rounded-lg bg-red-50 border border-red-200';
+                connectionTest.querySelector('p').textContent = '❌ Connection failed: ' + error.message;
+            }
+        });
+
+        testRegistrationBtn.addEventListener('click', async () => {
+            const url = scriptUrlInput.value.trim();
+            if (!url) {
+                alert('Sila masukkan URL terlebih dahulu');
+                return;
+            }
+            
+            connectionTest.classList.remove('hidden');
+            connectionTest.className = 'mt-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200';
+            connectionTest.querySelector('p').innerHTML = 'Testing registration with name "Test User"...<br>Check console (F12) for details.';
+            
+            try {
+                console.log('=== TESTING REGISTRATION ===');
+                console.log('URL:', url);
+                
+                // Test with FormData first
+                const formData = new FormData();
+                formData.append('action', 'register');
+                formData.append('name', 'Test User');
+                formData.append('timestamp', new Date().toISOString());
+                
+                console.log('Trying FormData method...');
+                const response1 = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log('FormData Response Status:', response1.status);
+                console.log('FormData Response Headers:', [...response1.headers.entries()]);
+                
+                const text1 = await response1.text();
+                console.log('FormData Response Text:', text1);
+                
+                let result1;
+                try {
+                    result1 = JSON.parse(text1);
+                    console.log('FormData Parsed Result:', result1);
+                } catch (e) {
+                    console.log('FormData - Could not parse as JSON');
+                }
+                
+                // Test with JSON method
+                console.log('Trying JSON method...');
+                const payload = {
+                    action: 'register',
+                    name: 'Test User JSON',
+                    timestamp: new Date().toISOString()
+                };
+                
+                const response2 = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                console.log('JSON Response Status:', response2.status);
+                console.log('JSON Response Headers:', [...response2.headers.entries()]);
+                
+                const text2 = await response2.text();
+                console.log('JSON Response Text:', text2);
+                
+                let result2;
+                try {
+                    result2 = JSON.parse(text2);
+                    console.log('JSON Parsed Result:', result2);
+                } catch (e) {
+                    console.log('JSON - Could not parse as JSON');
+                }
+                
+                // Show results
+                let message = '📊 Test Results:<br><br>';
+                message += `FormData: Status ${response1.status}<br>`;
+                message += `Response: ${text1.substring(0, 100)}...<br><br>`;
+                message += `JSON: Status ${response2.status}<br>`;
+                message += `Response: ${text2.substring(0, 100)}...<br><br>`;
+                message += 'Check console (F12) for full details.';
+                
+                connectionTest.className = 'mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200';
+                connectionTest.querySelector('p').innerHTML = message;
+                
+            } catch (error) {
+                console.error('Test registration error:', error);
+                connectionTest.className = 'mt-4 p-3 rounded-lg bg-red-50 border border-red-200';
+                connectionTest.querySelector('p').innerHTML = '❌ Test failed: ' + error.message + '<br>Check console (F12) for details.';
+            }
+        });
+
+        diagnoseBtn.addEventListener('click', async () => {
+            const url = scriptUrlInput.value.trim();
+            if (!url) {
+                alert('Sila masukkan URL terlebih dahulu');
+                return;
+            }
+            
+            connectionTest.classList.remove('hidden');
+            connectionTest.className = 'mt-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200';
+            connectionTest.querySelector('p').innerHTML = '🔍 Running diagnostics...<br>Check console (F12) for details.';
+            
+            console.log('=== DIAGNOSTIC REPORT ===');
+            console.log('URL being tested:', url);
+            console.log('Browser:', navigator.userAgent);
+            console.log('Current time:', new Date().toISOString());
+            
+            let diagnostics = [];
+            
+            // Test 1: Basic URL validation
+            try {
+                const urlObj = new URL(url);
+                console.log('✅ URL is valid');
+                console.log('Protocol:', urlObj.protocol);
+                console.log('Host:', urlObj.host);
+                console.log('Pathname:', urlObj.pathname);
+                diagnostics.push('✅ URL format is valid');
+            } catch (e) {
+                console.log('❌ URL is invalid:', e.message);
+                diagnostics.push('❌ URL format is invalid');
+            }
+            
+            // Test 2: Check if it's a Google Apps Script URL
+            if (url.includes('script.google.com')) {
+                console.log('✅ This is a Google Apps Script URL');
+                diagnostics.push('✅ Google Apps Script URL detected');
+                
+                if (url.includes('/macros/s/')) {
+                    console.log('✅ URL contains /macros/s/ (correct format)');
+                    diagnostics.push('✅ URL format looks correct');
+                } else {
+                    console.log('❌ URL missing /macros/s/ - might be wrong URL');
+                    diagnostics.push('❌ URL might be incorrect - should contain /macros/s/');
+                }
+                
+                if (url.includes('/exec')) {
+                    console.log('✅ URL ends with /exec (correct)');
+                    diagnostics.push('✅ URL ends with /exec');
+                } else {
+                    console.log('❌ URL should end with /exec');
+                    diagnostics.push('❌ URL should end with /exec');
+                }
+            } else {
+                console.log('❌ This is not a Google Apps Script URL');
+                diagnostics.push('❌ Not a Google Apps Script URL');
+            }
+            
+            // Test 3: Try different request methods
+            const methods = [
+                { name: 'GET', options: { method: 'GET' } },
+                { name: 'GET with test param', options: { method: 'GET' }, url: url + '?test=1' },
+                { name: 'POST empty', options: { method: 'POST' } },
+                { name: 'POST with form data', options: { 
+                    method: 'POST', 
+                    body: new FormData() 
+                }},
+                { name: 'POST with JSON', options: { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test: true })
+                }}
+            ];
+            
+            for (const method of methods) {
+                try {
+                    console.log(`Testing ${method.name}...`);
+                    const testUrl = method.url || url;
+                    const response = await fetch(testUrl, method.options);
+                    console.log(`${method.name} - Status: ${response.status}`);
+                    console.log(`${method.name} - Headers:`, [...response.headers.entries()]);
+                    
+                    const text = await response.text();
+                    console.log(`${method.name} - Response (first 200 chars):`, text.substring(0, 200));
+                    
+                    diagnostics.push(`${method.name}: Status ${response.status}`);
+                    
+                    if (response.status === 200) {
+                        diagnostics.push(`✅ ${method.name} successful`);
+                    } else if (response.status === 302) {
+                        diagnostics.push(`⚠️ ${method.name} redirected - might need authentication`);
+                    } else {
+                        diagnostics.push(`❌ ${method.name} failed with status ${response.status}`);
+                    }
+                    
+                } catch (error) {
+                    console.log(`${method.name} - Error:`, error);
+                    diagnostics.push(`❌ ${method.name}: ${error.message}`);
+                }
+            }
+            
+            // Test 4: CORS check
+            console.log('Testing CORS...');
+            try {
+                const corsResponse = await fetch(url, { 
+                    method: 'OPTIONS',
+                    headers: {
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+                console.log('CORS preflight status:', corsResponse.status);
+                diagnostics.push(`CORS preflight: Status ${corsResponse.status}`);
+            } catch (error) {
+                console.log('CORS test failed:', error);
+                diagnostics.push(`❌ CORS issue: ${error.message}`);
+            }
+            
+            // Show results
+            let message = '🔍 <strong>Diagnostic Results:</strong><br><br>';
+            diagnostics.forEach(diag => {
+                message += diag + '<br>';
+            });
+            message += '<br><strong>Common Solutions:</strong><br>';
+            message += '1. Make sure Apps Script is deployed as "Web app"<br>';
+            message += '2. Set "Who has access" to "Anyone"<br>';
+            message += '3. URL should end with /exec<br>';
+            message += '4. Try re-deploying with a new version<br>';
+            message += '<br>Check console (F12) for detailed logs.';
+            
+            connectionTest.className = 'mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200';
+            connectionTest.querySelector('p').innerHTML = message;
+        });
+
+        settingsBtn.addEventListener('click', () => {
+            setupModal.style.display = 'flex';
+        });
+
+        // API functions with better error handling
+        async function loadData() {
+            try {
+                updateConnectionStatus('loading');
+                console.log('Loading data from:', SCRIPT_URL);
+                
+                const response = await fetch(SCRIPT_URL + '?t=' + Date.now(), {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Raw data received:', data);
+                
+                attendanceData = Array.isArray(data) ? data : [];
+                updateConnectionStatus('connected');
+                updateAllViews();
+                console.log('Data loaded successfully:', attendanceData);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                updateConnectionStatus('error');
+                updateAllViews();
+            }
+        }
+
+        async function registerParent(name) {
+            try {
+                console.log('Registering parent:', name);
+                
+                // Use GET request with URL parameters to avoid CORS issues
+                const params = new URLSearchParams({
+                    action: 'register',
+                    name: name,
+                    timestamp: new Date().toISOString()
+                });
+                
+                const url = SCRIPT_URL + '?' + params.toString();
+                console.log('Sending GET request to:', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET'
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const responseText = await response.text();
+                console.log('Response text:', responseText);
+                
+                const result = JSON.parse(responseText);
+                console.log('Registration result:', result);
+                
+                if (result && result.success) {
+                    return result.queueNumber || 1;
+                }
+                
+                // If no success field, assume it worked and return a queue number
+                if (result && result.queueNumber) {
+                    return result.queueNumber;
+                }
+                
+                throw new Error('Registration failed: ' + (result?.error || 'Unknown error'));
+            } catch (error) {
+                console.error('Error registering:', error);
+                throw error;
+            }
+        }
+
+        async function updateStatus(id, status) {
+            try {
+                console.log('Updating status:', id, status);
+                
+                // Use GET request with URL parameters to avoid CORS issues
+                const params = new URLSearchParams({
+                    action: 'updateStatus',
+                    id: parseInt(id),
+                    status: status
+                });
+                
+                const url = SCRIPT_URL + '?' + params.toString();
+                console.log('Sending GET request to:', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET'
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Response error text:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+                }
+                
+                const responseText = await response.text();
+                console.log('Response text:', responseText);
+                
+                const result = JSON.parse(responseText);
+                console.log('Update result:', result);
+                
+                if (!result.success) {
+                    throw new Error('Update failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error updating status:', error);
+                throw error;
+            }
+        }
+
+        // UI functions
+        function updateConnectionStatus(status) {
+            const statusEl = connectionStatus.querySelector('div');
+            const textEl = connectionStatus.querySelector('span');
+            
+            switch(status) {
+                case 'connected':
+                    statusEl.className = 'w-3 h-3 bg-green-500 rounded-full mr-2';
+                    textEl.textContent = 'Disambung';
+                    break;
+                case 'loading':
+                    statusEl.className = 'w-3 h-3 bg-yellow-500 rounded-full mr-2';
+                    textEl.textContent = 'Memuat...';
+                    break;
+                case 'error':
+                    statusEl.className = 'w-3 h-3 bg-red-500 rounded-full mr-2';
+                    textEl.textContent = 'Ralat Sambungan';
+                    break;
+            }
+        }
+
+        function updateAllViews() {
+            updateTeacherView();
+            updateDataSheet();
+            findNextToCall();
+        }
+
+        function findNextToCall() {
+            const waiting = attendanceData.filter(p => p.status === 'Menunggu');
+            if (waiting.length > 0) {
+                nextToCall = Math.min(...waiting.map(p => p.id));
+                const nextPerson = attendanceData.find(p => p.id === nextToCall);
+                if (nextPerson) {
+                    currentQueueDisplay.textContent = nextToCall;
+                    currentNameDisplay.textContent = nextPerson.name;
+                }
+            } else {
+                const called = attendanceData.filter(p => p.status === 'Dipanggil');
+                if (called.length > 0) {
+                    const currentPerson = called[called.length - 1];
+                    currentQueueDisplay.textContent = currentPerson.id;
+                    currentNameDisplay.textContent = currentPerson.name;
+                } else {
+                    currentQueueDisplay.textContent = '-';
+                    currentNameDisplay.textContent = 'Tiada';
+                }
+            }
+        }
+
+        // Mode switching
+        parentModeBtn.addEventListener('click', () => {
+            parentModeBtn.className = 'px-6 py-3 rounded-md font-medium transition-all duration-200 bg-blue-500 text-white';
+            teacherModeBtn.className = 'px-6 py-3 rounded-md font-medium transition-all duration-200 text-gray-600 hover:text-gray-800';
+            parentSection.classList.remove('hidden');
+            teacherSection.classList.add('hidden');
+        });
+
+        teacherModeBtn.addEventListener('click', () => {
+            teacherModeBtn.className = 'px-6 py-3 rounded-md font-medium transition-all duration-200 bg-blue-500 text-white';
+            parentModeBtn.className = 'px-6 py-3 rounded-md font-medium transition-all duration-200 text-gray-600 hover:text-gray-800';
+            teacherSection.classList.remove('hidden');
+            parentSection.classList.add('hidden');
+            loadData(); // Refresh data when switching to teacher mode
+        });
+
+        // Parent registration
+        registerBtn.addEventListener('click', async () => {
+            const name = parentNameInput.value.trim();
+            if (!name) {
+                alert('Sila masukkan nama anda');
+                return;
+            }
+
+            if (!SCRIPT_URL) {
+                alert('Sistem belum disediakan. Sila hubungi guru.');
+                return;
+            }
+
+            registerBtn.classList.add('loading');
+            registerBtn.textContent = 'Mendaftar...';
+
+            try {
+                console.log('Starting registration process for:', name);
+                const queueNumber = await registerParent(name);
+                console.log('Registration successful, queue number:', queueNumber);
+                
+                // Show thank you message
+                parentSection.querySelector('.bg-white').style.display = 'none';
+                thankYouMessage.classList.remove('hidden');
+                queueNumberDisplay.textContent = queueNumber;
+                parentNameInput.value = '';
+
+                // Auto-hide after 8 seconds
+                setTimeout(() => {
+                    thankYouMessage.classList.add('hidden');
+                    parentSection.querySelector('.bg-white').style.display = 'block';
+                }, 8000);
+
+                // Refresh data after a short delay
+                setTimeout(() => {
+                    console.log('Refreshing data after registration...');
+                    loadData();
+                }, 2000);
+
+            } catch (error) {
+                console.error('Registration error details:', error);
+                
+                // Show user-friendly error message
+                alert('Maaf, terdapat masalah semasa mendaftar. Sila cuba lagi atau hubungi guru untuk bantuan.');
+                
+            } finally {
+                registerBtn.classList.remove('loading');
+                registerBtn.textContent = '📝 Daftar Kehadiran';
+            }
+        });
+
+        // Teacher functions
+        callNextBtn.addEventListener('click', async () => {
+            const nextPerson = attendanceData.find(p => p.id === nextToCall && p.status === 'Menunggu');
+            
+            if (!nextPerson) {
+                alert('Tiada lagi dalam giliran');
+                return;
+            }
+
+            callNextBtn.classList.add('loading');
+            try {
+                await updateStatus(nextToCall, 'Dipanggil');
+                await loadData();
+            } catch (error) {
+                alert('Ralat semasa memanggil: ' + error.message);
+                console.error('Call error:', error);
+            } finally {
+                callNextBtn.classList.remove('loading');
+            }
+        });
+
+        completeBtn.addEventListener('click', async () => {
+            const currentPerson = attendanceData.find(p => p.id === nextToCall && p.status === 'Dipanggil');
+            
+            if (!currentPerson) {
+                alert('Tiada yang sedang dipanggil');
+                return;
+            }
+
+            completeBtn.classList.add('loading');
+            try {
+                await updateStatus(nextToCall, 'Selesai');
+                await loadData();
+            } catch (error) {
+                alert('Ralat semasa menyelesaikan: ' + error.message);
+                console.error('Complete error:', error);
+            } finally {
+                completeBtn.classList.remove('loading');
+            }
+        });
+
+        refreshBtn.addEventListener('click', loadData);
+
+        // Update teacher view
+        function updateTeacherView() {
+            const totalCount = attendanceData.length;
+            const waitingCount = attendanceData.filter(person => person.status === 'Menunggu').length;
+            
+            totalCountDisplay.textContent = totalCount;
+            waitingCountDisplay.textContent = waitingCount;
+
+            if (totalCount === 0) {
+                attendanceList.innerHTML = '<div class="text-center text-gray-500 py-8">Belum ada pendaftaran</div>';
+            } else {
+                attendanceList.innerHTML = attendanceData.map(person => `
+                    <div class="flex justify-between items-center p-3 rounded-lg ${getStatusColor(person.status)}">
+                        <div>
+                            <div class="font-medium">${person.id}. ${person.name}</div>
+                            <div class="text-sm text-gray-600">${person.registrationTime}</div>
+                        </div>
+                        <div class="text-sm font-medium ${getStatusTextColor(person.status)}">
+                            ${person.status}
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Update data sheet
+        function updateDataSheet() {
+            if (attendanceData.length === 0) {
+                dataSheet.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                            Tiada data kehadiran
+                        </td>
+                    </tr>
+                `;
+            } else {
+                dataSheet.innerHTML = attendanceData.map(person => `
+                    <tr class="${person.status === 'Dipanggil' ? 'bg-yellow-50' : person.status === 'Selesai' ? 'bg-green-50' : ''}">
+                        <td class="border border-gray-200 px-4 py-2">${person.id}</td>
+                        <td class="border border-gray-200 px-4 py-2">${person.name}</td>
+                        <td class="border border-gray-200 px-4 py-2">${person.registrationTime}</td>
+                        <td class="border border-gray-200 px-4 py-2">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(person.status)}">
+                                ${person.status}
+                            </span>
+                        </td>
+                        <td class="border border-gray-200 px-4 py-2">${person.calledTime || '-'}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // Helper functions
+        function getStatusColor(status) {
+            switch(status) {
+                case 'Menunggu': return 'bg-blue-50 border border-blue-200';
+                case 'Dipanggil': return 'bg-yellow-50 border border-yellow-200';
+                case 'Selesai': return 'bg-green-50 border border-green-200';
+                default: return 'bg-gray-50 border border-gray-200';
+            }
+        }
+
+        function getStatusTextColor(status) {
+            switch(status) {
+                case 'Menunggu': return 'text-blue-600';
+                case 'Dipanggil': return 'text-yellow-600';
+                case 'Selesai': return 'text-green-600';
+                default: return 'text-gray-600';
+            }
+        }
+
+        function getStatusBadgeColor(status) {
+            switch(status) {
+                case 'Menunggu': return 'bg-blue-100 text-blue-800';
+                case 'Dipanggil': return 'bg-yellow-100 text-yellow-800';
+                case 'Selesai': return 'bg-green-100 text-green-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        // Auto-refresh for real-time updates
+        setInterval(() => {
+            if (SCRIPT_URL && !document.querySelector('.loading')) {
+                loadData();
+            }
+        }, 15000); // Refresh every 15 seconds
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'973f448b534e4956',t:'MTc1NjAwMDk0OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
